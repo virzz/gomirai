@@ -6,24 +6,22 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Logiase/gomirai/message"
-	"github.com/Logiase/gomirai/tools"
+	"github.com/virzz/gomirai/message"
 )
 
+// Bot Mirai Bot
 type Bot struct {
-	QQ         uint
-	SessionKey string
-
-	Client *Client
-
-	Logger *logrus.Entry
-
+	QQ          uint
+	SessionKey  string
+	Client      *Client
+	Logger      *logrus.Entry
 	fetchTime   time.Duration
 	size        int
 	currentSize int
 	Chan        chan message.Event
 }
 
+// SetChannel -
 func (b *Bot) SetChannel(time time.Duration, size int) {
 	b.Chan = make(chan message.Event, size)
 	b.size = size
@@ -31,6 +29,7 @@ func (b *Bot) SetChannel(time time.Duration, size int) {
 	b.fetchTime = time
 }
 
+// SendFriendMessage 发送好友消息
 func (b *Bot) SendFriendMessage(qq, quote uint, msg ...message.Message) (uint, error) {
 	data := map[string]interface{}{"sessionKey": b.SessionKey, "qq": qq, "messageChain": msg}
 	if quote != 0 {
@@ -40,10 +39,11 @@ func (b *Bot) SendFriendMessage(qq, quote uint, msg ...message.Message) (uint, e
 	if err != nil {
 		return 0, err
 	}
-	b.Logger.Info("Send FriendMessage to", qq)
-	return tools.Json.Get([]byte(res), "messageId").ToUint(), nil
+	b.Logger.Infoln("Send FriendMessage to", qq)
+	return JSON.Get([]byte(res), "messageId").ToUint(), nil
 }
 
+// SendGroupMessage 发送群组消息
 func (b *Bot) SendGroupMessage(group, quote uint, msg ...message.Message) (uint, error) {
 	data := map[string]interface{}{"sessionKey": b.SessionKey, "group": group, "messageChain": msg}
 	if quote != 0 {
@@ -53,13 +53,13 @@ func (b *Bot) SendGroupMessage(group, quote uint, msg ...message.Message) (uint,
 	if err != nil {
 		return 0, err
 	}
-	b.Logger.Info("Send FriendMessage to", group)
-	return tools.Json.Get([]byte(res), "messageId").ToUint(), nil
+	b.Logger.Infoln("Send FriendMessage to", group)
+	return JSON.Get([]byte(res), "messageId").ToUint(), nil
 }
 
+// FetchMessages 获取消息
 func (b *Bot) FetchMessages() error {
 	t := time.NewTicker(b.fetchTime)
-
 	for {
 		res, err := b.Client.doGet("/fetchMessage", map[string]string{
 			"sessionKey": b.SessionKey,
@@ -69,14 +69,13 @@ func (b *Bot) FetchMessages() error {
 			return err
 		}
 		var tc []message.Event
-		tools.Json.Get([]byte(res), "data").ToVal(&tc)
+		JSON.Get([]byte(res), "data").ToVal(&tc)
 		for _, v := range tc {
 			if len(b.Chan) == b.size {
 				<-b.Chan
 			}
 			b.Chan <- v
 		}
-
 		<-t.C
 	}
 }

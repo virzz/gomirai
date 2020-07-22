@@ -1,11 +1,13 @@
 package gomirai
 
-import "github.com/Logiase/gomirai/message"
+import "github.com/virzz/gomirai/message"
 
-func SendGroupMessageWithBot(b *Bot, qq, quote uint, msg ...message.Message) (uint, error) {
-	return b.SendGroupMessage(qq, quote, msg...)
+// SendGroupMessageWithBot 发送群消息
+func SendGroupMessageWithBot(bot *Bot, qq, quote uint, msg ...message.Message) (uint, error) {
+	return bot.SendGroupMessage(qq, quote, msg...)
 }
 
-func SendFriendMessageWithBot(b *Bot, group, quote uint, msg ...message.Message) (uint, error) {
-	return b.SendGroupMessage(group, quote, msg...)
+// SendFriendMessageWithBot 发送好友消息
+func SendFriendMessageWithBot(bot *Bot, group, quote uint, msg ...message.Message) (uint, error) {
+	return bot.SendGroupMessage(group, quote, msg...)
 }

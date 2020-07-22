@@ -1,54 +1,57 @@
 package gomirai
 
 import (
-	"errors"
-	"strconv"
+	"fmt"
 	"time"
 
 	"gopkg.in/h2non/gentleman.v2"
 	"gopkg.in/h2non/gentleman.v2/plugins/body"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/Logiase/gomirai/tools"
 )
 
 // Client 与Mirai进行沟通
 type Client struct {
-	Name    string
-	AuthKey string
-
-	HttpClient *gentleman.Client
+	Name       string
+	AuthKey    string
+	HTTPClient *gentleman.Client
 	Bots       map[uint]*Bot
-
-	Logger *logrus.Entry
+	Logger     *logrus.Entry
 }
 
 // NewClient 新建Client
-func NewClient(name, url, authKey string) *Client {
+func NewClient(name, url, authKey string, logger ...*logrus.Entry) *Client {
 	c := gentleman.New()
 	c.URL(url)
 
+	var log *logrus.Entry
+	if len(logger) > 0 {
+		log = logger[0]
+	} else {
+		log = logrus.New().WithFields(logrus.Fields{
+			"client": name,
+		})
+	}
 	return &Client{
 		AuthKey:    authKey,
-		HttpClient: c,
+		HTTPClient: c,
 		Bots:       make(map[uint]*Bot),
-		Logger: logrus.New().WithFields(logrus.Fields{
-			"client": name,
-		}),
+		Logger:     log,
 	}
 }
 
+// Auth 开始会话-认证(Authorize)
 func (c *Client) Auth() (string, error) {
 	data := map[string]string{"authKey": c.AuthKey}
 	res, err := c.doPost("/auth", data)
 	if err != nil {
 		return "", err
 	}
-	c.Logger.Info("Authed")
-	return tools.Json.Get([]byte(res), "session").ToString(), nil
+	c.Logger.Infoln("Authed")
+	return JSON.Get([]byte(res), "session").ToString(), nil
 }
 
+// Verify 校验Session
 func (c *Client) Verify(qq uint, sessionKey string) (*Bot, error) {
 	data := map[string]interface{}{"sessionKey": sessionKey, "qq": qq}
 	_, err := c.doPost("/verify", data)
@@ -57,10 +60,11 @@ func (c *Client) Verify(qq uint, sessionKey string) (*Bot, error) {
 	}
 	c.Bots[qq] = &Bot{QQ: qq, SessionKey: sessionKey, Client: c, Logger: c.Logger.WithField("qq", qq)}
 	c.Bots[qq].SetChannel(time.Second, 10)
-	c.Logger.Info("Verified")
+	c.Logger.Infoln("Verified")
 	return c.Bots[qq], nil
 }
 
+// Release 释放Session
 func (c *Client) Release(qq uint) error {
 	data := map[string]interface{}{"sessionKey": c.Bots[qq].SessionKey, "qq": qq}
 	_, err := c.doPost("release", data)
@@ -68,13 +72,13 @@ func (c *Client) Release(qq uint) error {
 		return err
 	}
 	delete(c.Bots, qq)
-	c.Logger.Info("Released")
+	c.Logger.Infoln("Released")
 	return nil
 }
 
 func (c *Client) doPost(path string, data interface{}) (string, error) {
-	c.Logger.Trace("POST:"+path+" Data:", data)
-	res, err := c.HttpClient.Request().
+	c.Logger.Debugln("POST:", path, " Data:", data)
+	res, err := c.HTTPClient.Request().
 		Path(path).
 		Method("POST").
 		SetHeader("Content-Type", "application/json;charset=utf-8").
@@ -84,19 +88,20 @@ func (c *Client) doPost(path string, data interface{}) (string, error) {
 		c.Logger.Warn("POST Failed")
 		return "", err
 	}
-	c.Logger.Trace("result StatusCode:", res.StatusCode)
+	c.Logger.Debugln("result StatusCode:", res.StatusCode)
 	if !res.Ok {
-		return res.String(), errors.New("Http: " + strconv.Itoa(res.StatusCode))
+		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
+		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	if tools.Json.Get([]byte(res.String()), "code").ToInt() != 0 {
-		return res.String(), getErrByCode(tools.Json.Get([]byte(res.String()), "code").ToUint())
+	if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
+		return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
 	}
 	return res.String(), nil
 }
 
 func (c *Client) doGet(path string, params map[string]string) (string, error) {
-	c.Logger.Trace("GET:" + path)
-	res, err := c.HttpClient.Request().
+	c.Logger.Debugln("GET:", path)
+	res, err := c.HTTPClient.Request().
 		Path(path).
 		SetQueryParams(params).
 		SetHeader("Content-Type", "application/json;charset=utf-8").
@@ -106,12 +111,13 @@ func (c *Client) doGet(path string, params map[string]string) (string, error) {
 		c.Logger.Warn("GET Failed")
 		return "", err
 	}
-	c.Logger.Trace("result StatusCode:", res.StatusCode)
+	c.Logger.Debugln("result StatusCode:", res.StatusCode)
 	if !res.Ok {
-		return res.String(), errors.New("Http: " + strconv.Itoa(res.StatusCode))
+		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
+		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	if tools.Json.Get([]byte(res.String()), "code").ToInt() != 0 {
-		return res.String(), getErrByCode(tools.Json.Get([]byte(res.String()), "code").ToUint())
+	if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
+		return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
 	}
 	return res.String(), nil
 }
@@ -121,26 +127,26 @@ func getErrByCode(code uint) error {
 	case 0:
 		return nil
 	case 1:
-		return errors.New("错误的auth key")
+		return fmt.Errorf("错误的auth key")
 	case 2:
-		return errors.New("指定的Bot不存在")
+		return fmt.Errorf("指定的Bot不存在")
 	case 3:
-		return errors.New("Session失效或不存在")
+		return fmt.Errorf("Session失效或不存在")
 	case 4:
-		return errors.New("Session未认证(未激活)")
+		return fmt.Errorf("Session未认证(未激活)")
 	case 5:
-		return errors.New("发送消息目标不存在(指定对象不存在)")
+		return fmt.Errorf("发送消息目标不存在(指定对象不存在)")
 	case 6:
-		return errors.New("指定文件不存在，出现于发送本地图片")
+		return fmt.Errorf("指定文件不存在，出现于发送本地图片")
 	case 10:
-		return errors.New("无操作权限，指Bot没有对应操作的限权")
+		return fmt.Errorf("无操作权限，指Bot没有对应操作的限权")
 	case 20:
-		return errors.New("Bot被禁言，指Bot当前无法向指定群发送消息")
+		return fmt.Errorf("Bot被禁言，指Bot当前无法向指定群发送消息")
 	case 30:
-		return errors.New("消息过长")
+		return fmt.Errorf("消息过长")
 	case 400:
-		return errors.New("错误的访问，如参数错误等")
+		return fmt.Errorf("错误的访问，如参数错误等")
 	default:
-		return errors.New("未知错误,Code:" + string(code))
+		return fmt.Errorf("未知错误，Code: %d", code)
 	}
 }
