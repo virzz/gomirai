@@ -93,12 +93,52 @@ const (
 	EventBotInvitedJoinGroupRequest = "BotInvitedJoinGroupRequestEvent"
 )
 
+/**
+ * Friend Event
+ */
 const (
 	// EventNewFriendRequest 添加好友申请
 	EventNewFriendRequest = "NewFriendRequestEvent"
 	// EventFriendRecall 好友消息撤回
 	EventFriendRecall = "FriendRecallEvent"
 )
+
+// Sender 消息发送者
+type Sender struct {
+	// ID QQ号
+	ID uint `json:"id,omitempty"`
+	// Group (GroupMessage)消息来源群信息
+	Group Group `json:"group,omitempty"`
+	// NickName (FriendMessage)发送者昵称
+	NickName string `json:"nickname,omitempty"`
+	// Remark (FriendMessage)发送者备注
+	Remark string `json:"remark,omitempty"`
+
+	// MemberName (GroupMessage)发送者群昵称
+	MemberName string `json:"memberName,omitempty"`
+	// Permission (GroupMessage)发送者在群中的角色
+	Permission string `json:"permission,omitempty"`
+}
+
+// Member 成员(被操作对象)
+type Member struct {
+	Group      Group  `json:"group"`
+	ID         int64  `json:"id"`
+	MemberName string `json:"memberName"`
+	Permission string `json:"permission"`
+}
+
+// Operator 操作者
+type Operator struct {
+	// ID QQ号
+	ID uint `json:"id,omitempty"`
+	// Group (GroupMessage)消息来源群信息
+	Group Group `json:"group,omitempty"`
+	// MemberName 群名片
+	MemberName string `json:"memberName"`
+	// Permission 权限
+	Permission string `json:"permission"`
+}
 
 // Event 事件
 type Event struct {
@@ -114,6 +154,10 @@ type Event struct {
 	FromID uint `json:"fromId"`
 	// GroupID 群号
 	GroupID uint `json:"groupId"`
+	// Operator 操作人
+	Operator Operator `json:"operator"`
+	// DurationSeconds 禁言时间
+	DurationSeconds int64 `json:"durationSeconds"`
 }
 
 // Group QQ群
@@ -124,20 +168,4 @@ type Group struct {
 	Name string `json:"name,omitempty"`
 	// Permisson bot在群中的角色
 	Permisson string `json:"permisson,omitempty"`
-}
-
-// Sender 消息发送者
-type Sender struct {
-	// ID QQ号
-	ID uint `json:"id,omitempty"`
-	// NickName (FriendMessage)发送者昵称
-	NickName string `json:"memberName,omitempty"`
-	// Remark (FriendMessage)发送者备注
-	Remark string `json:"remark,omitempty"`
-	// MemberName (GroupMessage)发送者群昵称
-	MemberName string `json:"memberName,omitempty"`
-	// Permission (GroupMessage)发送者在群中的角色
-	Permission string `json:"permission,omitempty"`
-	// Group (GroupMessage)消息来源群信息
-	Group Group `json:"group,omitempty"`
 }

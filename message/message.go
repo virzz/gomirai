@@ -23,7 +23,7 @@ const (
 	MsgTypeJSON = "Json"
 	// MsgTypeApp App
 	MsgTypeApp = "App"
-	// MsgTypePoke 抖一抖
+	// MsgTypePoke 戳一戳
 	MsgTypePoke = "Poke"
 )
 
@@ -118,7 +118,7 @@ func RichMessage(t, content string) Message {
 	return m
 }
 
-// PokeMessage 抖一抖消息
+// PokeMessage 戳一戳消息
 func PokeMessage(name string) Message {
 	return Message{Type: MsgTypePoke, Name: name}
 }

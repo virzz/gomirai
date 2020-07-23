@@ -68,6 +68,7 @@ func (b *Bot) FetchMessages() error {
 		if err != nil {
 			return err
 		}
+		b.Logger.Debugln(res)
 		var tc []message.Event
 		JSON.Get([]byte(res), "data").ToVal(&tc)
 		for _, v := range tc {
@@ -80,6 +81,19 @@ func (b *Bot) FetchMessages() error {
 	}
 }
 
+const (
+	// OperateAgree 同意入群
+	OperateAgree = iota
+	// OperateRefuse 拒绝入群
+	OperateRefuse
+	// OperateIgnore 忽略请求
+	OperateIgnore
+	// OperateRefuseBan 拒绝入群并添加黑名单，(腾讯)不再接收该用户的入群申请
+	OperateRefuseBan
+	// OperateIgnoreBan 忽略入群并添加黑名单，(腾讯)不再接收该用户的入群申请
+	OperateIgnoreBan
+)
+
 // RespondMemberJoinRequest 响应用户加群请求
 // operate	说明
 // 0	同意入群
@@ -87,12 +101,12 @@ func (b *Bot) FetchMessages() error {
 // 2	忽略请求
 // 3	拒绝入群并添加黑名单，不再接收该用户的入群申请
 // 4	忽略入群并添加黑名单，不再接收该用户的入群申请
-func (b *Bot) RespondMemberJoinRequest(eventID, fromID, groupID int64, operate int, message string) error {
+func (b *Bot) RespondMemberJoinRequest(eventID, fromID, groupID uint, operate int, message string) error {
 	data := map[string]interface{}{"sessionKey": b.SessionKey, "eventId": eventID, "fromId": fromID, "groupId": groupID, "operate": operate, "message": message}
 	_, err := b.Client.doPost("/resp/memberJoinRequestEvent", data)
 	if err != nil {
 		return err
 	}
-	b.Logger.Info("Respond Member Join Request ", fromID, " join ", groupID, " operate: ", operate)
+	b.Logger.Infoln("Respond Member Join Request ", fromID, " join ", groupID, " operate: ", operate)
 	return nil
 }
