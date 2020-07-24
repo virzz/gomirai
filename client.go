@@ -1,11 +1,15 @@
 package gomirai
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"strconv"
 	"time"
 
 	"gopkg.in/h2non/gentleman.v2"
 	"gopkg.in/h2non/gentleman.v2/plugins/body"
+	"gopkg.in/h2non/gentleman.v2/plugins/multipart"
 
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -39,6 +43,15 @@ func NewClient(name, url, authKey string, logger ...*logrus.Entry) *Client {
 		Bots:       make(map[uint]*Bot),
 		Logger:     log,
 	}
+}
+
+// About -
+func (c *Client) About() (string, error) {
+	res, err := c.doGet("/about", nil)
+	if err != nil {
+		return "", err
+	}
+	return gjson.Get(res, "data.version").String(), nil
 }
 
 // Auth 开始会话-认证(Authorize)
@@ -82,8 +95,36 @@ func (c *Client) doPost(path string, data interface{}) (string, error) {
 	res, err := c.HTTPClient.Request().
 		Path(path).
 		Method("POST").
-		SetHeader("Content-Type", "application/json;charset=utf-8").
 		Use(body.JSON(data)).
+		SetHeader("Content-Type", "application/json;charset=utf-8").
+		Send()
+	if err != nil {
+		c.Logger.Warn("POST Failed")
+		return "", err
+	}
+	c.Logger.Trace("result StatusCode:", res.StatusCode)
+	if !res.Ok {
+		return res.String(), errors.New("Http: " + strconv.Itoa(res.StatusCode))
+	}
+	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
+}
+
+func (c *Client) doPostWithFormData(path string, fields map[string]interface{}) (string, error) {
+	data := make(multipart.DataFields)
+	files := make([]multipart.FormFile, 0)
+	for key, value := range fields {
+		if unbox, ok := value.(string); ok {
+			data[key] = append(data[key], unbox)
+		} else if unbox, ok := value.(io.Reader); ok {
+			files = append(files, multipart.FormFile{Name: key, Reader: unbox})
+		}
+	}
+	formData := multipart.FormData{Data: data, Files: files}
+	c.Logger.Trace("POST:"+path+" FormData:", formData)
+	res, err := c.HTTPClient.Request().
+		Path(path).
+		Method("POST").
+		Use(multipart.Data(formData)).
 		Send()
 	if err != nil {
 		c.Logger.Warn("POST Failed")
@@ -92,12 +133,7 @@ func (c *Client) doPost(path string, data interface{}) (string, error) {
 	c.Logger.Debugln("result StatusCode:", res.StatusCode)
 	if !res.Ok {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
-		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	// code := gjson.Get(res.String(), "code").Int()
-	// if code != 0 {
-	// 	return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
-	// }
 	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
 }
 
@@ -106,8 +142,8 @@ func (c *Client) doGet(path string, params map[string]string) (string, error) {
 	res, err := c.HTTPClient.Request().
 		Path(path).
 		SetQueryParams(params).
-		SetHeader("Content-Type", "application/json;charset=utf-8").
 		Method("GET").
+		SetHeader("Content-Type", "application/json;charset=utf-8").
 		Send()
 	if err != nil {
 		c.Logger.Warn("GET Failed")
@@ -116,11 +152,7 @@ func (c *Client) doGet(path string, params map[string]string) (string, error) {
 	c.Logger.Debugln("result StatusCode:", res.StatusCode)
 	if !res.Ok {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
-		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	// if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
-	// 	return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
-	// }
 	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
 }
 
