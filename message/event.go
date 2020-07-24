@@ -79,8 +79,8 @@ const (
 	EventGroupRecall = "GroupRecallEvent"
 	// EventMemberMute 群成员被禁言事件（该成员不可能是Bot，见BotMuteEvent）
 	EventMemberMute = "MemberMuteEvent"
-	// EventMemberUnmute 群成员被取消禁言事件（该成员不可能是Bot，见BotUnmuteEvent）
-	EventMemberUnmute = "MemberUnmuteEvent"
+	// EventMemberUnMute 群成员被取消禁言事件（该成员不可能是Bot，见BotUnmuteEvent）
+	EventMemberUnMute = "MemberUnmuteEvent"
 
 	// EventMemberCardChange 群名片改动
 	EventMemberCardChange = "MemberCardChangeEvent"
@@ -103,29 +103,12 @@ const (
 	EventFriendRecall = "FriendRecallEvent"
 )
 
-// Sender 消息发送者
-type Sender struct {
-	// ID QQ号
-	ID uint `json:"id,omitempty"`
-	// Group (GroupMessage)消息来源群信息
-	Group Group `json:"group,omitempty"`
-	// NickName (FriendMessage)发送者昵称
-	NickName string `json:"nickname,omitempty"`
-	// Remark (FriendMessage)发送者备注
-	Remark string `json:"remark,omitempty"`
-
-	// MemberName (GroupMessage)发送者群昵称
-	MemberName string `json:"memberName,omitempty"`
-	// Permission (GroupMessage)发送者在群中的角色
-	Permission string `json:"permission,omitempty"`
-}
-
 // Member 成员(被操作对象)
 type Member struct {
-	Group      Group  `json:"group"`
-	ID         int64  `json:"id"`
+	ID         uint   `json:"id"`
 	MemberName string `json:"memberName"`
 	Permission string `json:"permission"`
+	Group      Group  `json:"group"`
 }
 
 // Operator 操作者
@@ -140,26 +123,6 @@ type Operator struct {
 	Permission string `json:"permission"`
 }
 
-// Event 事件
-type Event struct {
-	// Type 事件类型
-	Type string `json:"type"`
-	// MessageChain (ReceiveMessage)消息链
-	MessageChain []Message `json:"messageChain"`
-	// Sender (ReceiveMessage)发送者信息
-	Sender Sender `json:"sender"`
-	// EventID 事件ID
-	EventID uint `json:"eventId"`
-	// FromID 操作人
-	FromID uint `json:"fromId"`
-	// GroupID 群号
-	GroupID uint `json:"groupId"`
-	// Operator 操作人
-	Operator Operator `json:"operator"`
-	// DurationSeconds 禁言时间
-	DurationSeconds int64 `json:"durationSeconds"`
-}
-
 // Group QQ群
 type Group struct {
 	// ID 消息来源群号
@@ -168,4 +131,57 @@ type Group struct {
 	Name string `json:"name,omitempty"`
 	// Permisson bot在群中的角色
 	Permisson string `json:"permisson,omitempty"`
+}
+
+// Sender 消息发送者
+type Sender struct {
+	// ID QQ号
+	ID uint `json:"id"`
+	// MemberName (GroupMessage)发送者群昵称
+	MemberName string `json:"memberName"`
+	// Permission (GroupMessage)发送者在群中的角色
+	Permission string `json:"permission"`
+	// Group (GroupMessage)消息来源群信息
+	Group Group `json:"group"`
+	// NickName (FriendMessage)发送者昵称
+	NickName string `json:"nickname"`
+	// Remark (FriendMessage)发送者备注
+	Remark string `json:"remark"`
+}
+
+// ComplexEvent -
+type ComplexEvent struct {
+	// Base
+	Type string `json:"type"`
+	// Message
+	MessageChain []Message `json:"messageChain"`
+	// Sender
+	Sender Sender `json:"sender"`
+	// Common
+	Member   Member   `json:"member"`
+	Operator Operator `json:"operator"`
+	Group    Group    `json:"group"`
+	// Card | SpecialTitle
+	Origin  string
+	New     string
+	Current string
+	// TODO: 强烈建议 MiraiHttpApi 修改 Origin,New,Current 为 string
+	// // GroupMute
+	// Origin  bool
+	// New     bool
+	// Current bool
+	// GroupRecall
+	AuthorID  uint  `json:"authorId"`
+	MessageID uint  `json:"messageId"`
+	Time      int64 `json:"time"`
+	// MemberMuteEvent
+	DurationSeconds int `json:"durationSeconds"`
+
+	// MemberJoinRequestEvent
+	EventID   uint   `json:"eventId"`
+	FromID    uint   `json:"fromId"`
+	GroupID   uint   `json:"groupId"`
+	GroupName string `json:"groupName"`
+	Nickname  string `json:"nick"`
+	Message   string `json:"message"`
 }

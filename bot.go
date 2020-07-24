@@ -1,10 +1,12 @@
 package gomirai
 
 import (
+	"encoding/json"
 	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 
 	"github.com/virzz/gomirai/message"
 )
@@ -18,12 +20,12 @@ type Bot struct {
 	fetchTime   time.Duration
 	size        int
 	currentSize int
-	Chan        chan message.Event
+	Chan        chan message.ComplexEvent // message.Event
 }
 
 // SetChannel -
 func (b *Bot) SetChannel(time time.Duration, size int) {
-	b.Chan = make(chan message.Event, size)
+	b.Chan = make(chan message.ComplexEvent, size)
 	b.size = size
 	b.currentSize = 0
 	b.fetchTime = time
@@ -40,7 +42,7 @@ func (b *Bot) SendFriendMessage(qq, quote uint, msg ...message.Message) (uint, e
 		return 0, err
 	}
 	b.Logger.Infoln("Send FriendMessage to", qq)
-	return JSON.Get([]byte(res), "messageId").ToUint(), nil
+	return uint(gjson.Get(res, "messageId").Uint()), nil
 }
 
 // SendGroupMessage 发送群组消息
@@ -54,7 +56,52 @@ func (b *Bot) SendGroupMessage(group, quote uint, msg ...message.Message) (uint,
 		return 0, err
 	}
 	b.Logger.Infoln("Send FriendMessage to", group)
-	return JSON.Get([]byte(res), "messageId").ToUint(), nil
+	return uint(gjson.Get(res, "messageId").Uint()), nil
+}
+
+// MuteGroupMember 禁言群成员
+func (b *Bot) MuteGroupMember(group, qq uint, time int) error {
+	data := map[string]interface{}{
+		"sessionKey": b.SessionKey,
+		"target":     group,
+		"memberId":   qq,
+		"time":       time,
+	}
+	_, err := b.Client.doPost("/mute", data)
+	if err != nil {
+		return err
+	}
+	b.Logger.Debugln("MuteGroupMember", qq, "in", group)
+	return nil
+}
+
+// UnMuteGroupMember 取消禁言群成员
+func (b *Bot) UnMuteGroupMember(group, qq uint) error {
+	data := map[string]interface{}{
+		"sessionKey": b.SessionKey,
+		"target":     group,
+		"memberId":   qq,
+	}
+	_, err := b.Client.doPost("/unmute", data)
+	if err != nil {
+		return err
+	}
+	b.Logger.Debugln("UnMuteGroupMember", qq, "in", group)
+	return nil
+}
+
+// RecallGroupMessage 取消禁言群成员
+func (b *Bot) RecallGroupMessage(sourceID uint) error {
+	data := map[string]interface{}{
+		"sessionKey": b.SessionKey,
+		"target":     sourceID,
+	}
+	_, err := b.Client.doPost("/recall", data)
+	if err != nil {
+		return err
+	}
+	b.Logger.Debugln("RecallGroupMessage", sourceID)
+	return nil
 }
 
 // FetchMessages 获取消息
@@ -68,15 +115,28 @@ func (b *Bot) FetchMessages() error {
 		if err != nil {
 			return err
 		}
-		b.Logger.Debugln(res)
-		var tc []message.Event
-		JSON.Get([]byte(res), "data").ToVal(&tc)
-		for _, v := range tc {
+		// b.Logger.Debugln(res)
+		events := gjson.Get(res, "data").Array()
+		for _, event := range events {
+			if event.Get("type").String() == message.EventGroupMuteAll {
+				continue
+			}
+			var c message.ComplexEvent
+			if err := json.Unmarshal([]byte(event.Raw), &c); err != nil {
+				b.Logger.Errorln("Unmarshal Event", err)
+				continue
+			}
 			if len(b.Chan) == b.size {
 				<-b.Chan
 			}
-			b.Chan <- v
+			b.Chan <- c
 		}
+		// for _, event := range events {
+		// 	if len(b.Chan) == b.size {
+		// 		<-b.Chan
+		// 	}
+		// 	b.Chan <- event
+		// }
 		<-t.C
 	}
 }

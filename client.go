@@ -8,6 +8,7 @@ import (
 	"gopkg.in/h2non/gentleman.v2/plugins/body"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 )
 
 // Client 与Mirai进行沟通
@@ -48,7 +49,7 @@ func (c *Client) Auth() (string, error) {
 		return "", err
 	}
 	c.Logger.Infoln("Authed")
-	return JSON.Get([]byte(res), "session").ToString(), nil
+	return gjson.Get(res, "session").String(), nil
 }
 
 // Verify 校验Session
@@ -93,10 +94,11 @@ func (c *Client) doPost(path string, data interface{}) (string, error) {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
 		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
-		return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
-	}
-	return res.String(), nil
+	// code := gjson.Get(res.String(), "code").Int()
+	// if code != 0 {
+	// 	return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
+	// }
+	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
 }
 
 func (c *Client) doGet(path string, params map[string]string) (string, error) {
@@ -116,10 +118,10 @@ func (c *Client) doGet(path string, params map[string]string) (string, error) {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
 		// errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
-		return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
-	}
-	return res.String(), nil
+	// if JSON.Get([]byte(res.String()), "code").ToInt() != 0 {
+	// 	return res.String(), getErrByCode(JSON.Get([]byte(res.String()), "code").ToUint())
+	// }
+	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
 }
 
 func getErrByCode(code uint) error {
