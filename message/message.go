@@ -30,15 +30,15 @@ const (
 // Message 消息
 type Message struct {
 	Type string `json:"type,omitempty"`
-	ID   uint   `json:"id,omitempty"`   //(Source,Quote)Source中表示消息id，Quote中表示被引用回复的原消息的id
+	ID   int64  `json:"id,omitempty"`   //(Source,Quote)Source中表示消息id，Quote中表示被引用回复的原消息的id
 	Time int64  `json:"time,omitempty"` //(Source) 发送时间
 
-	GroupID  uint      `json:"groupId,omitempty"`  //(Quote)Quote中表示被引用回复的原消息的群号
-	SenderID uint      `json:"senderId,omitempty"` //(Quote)Quote中表示被引用回复的原消息的发送者QQ号
-	TargetID uint      `json:"targetId,omitempty"` //(Quote)Quote中表示被引用回复的原消息的接收者群号或QQ号
+	GroupID  int64     `json:"groupId,omitempty"`  //(Quote)Quote中表示被引用回复的原消息的群号
+	SenderID int64     `json:"senderId,omitempty"` //(Quote)Quote中表示被引用回复的原消息的发送者QQ号
+	TargetID int64     `json:"targetId,omitempty"` //(Quote)Quote中表示被引用回复的原消息的接收者群号或QQ号
 	Origin   []Message `json:"origin,omitempty"`   //(Quote)Quote中表示被引用回复的原消息的消息链对象
 
-	Target  uint   `json:"target,omitempty"`  //(At)@的群员QQ号
+	Target  int64  `json:"target,omitempty"`  //(At)@的群员QQ号
 	Display string `json:"display,omitempty"` //(At)@的显示文本
 
 	FaceID int    `json:"faceId,omitempty"` //(Face)QQ表情的ID,发送时优先级比Name高
@@ -61,7 +61,7 @@ func PlainMessage(text string) Message {
 }
 
 // AtMessage At消息
-func AtMessage(target uint) Message {
+func AtMessage(target int64) Message {
 	if target == 0 {
 		return Message{Type: MsgTypeAtAll}
 	}

@@ -1,13 +1,15 @@
 package gomirai
 
-import "github.com/virzz/gomirai/message"
+import (
+	"github.com/virzz/gomirai/message"
+)
 
 // SendGroupMessageWithBot 发送群消息
-func SendGroupMessageWithBot(bot *Bot, qq, quote uint, msg ...message.Message) (uint, error) {
-	return bot.SendGroupMessage(qq, quote, msg...)
+func SendGroupMessageWithBot(b *Bot, qq, quote int64, msg ...message.Message) (int64, error) {
+	return b.SendGroupMessage(qq, quote, msg...)
 }
 
 // SendFriendMessageWithBot 发送好友消息
-func SendFriendMessageWithBot(bot *Bot, group, quote uint, msg ...message.Message) (uint, error) {
-	return bot.SendGroupMessage(group, quote, msg...)
+func SendFriendMessageWithBot(b *Bot, group, quote int64, msg ...message.Message) (int64, error) {
+	return b.SendGroupMessage(group, quote, msg...)
 }

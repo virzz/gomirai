@@ -105,7 +105,7 @@ const (
 
 // Member 成员(被操作对象)
 type Member struct {
-	ID         uint   `json:"id"`
+	ID         int64  `json:"id"`
 	MemberName string `json:"memberName"`
 	Permission string `json:"permission"`
 	Group      Group  `json:"group"`
@@ -114,7 +114,7 @@ type Member struct {
 // Operator 操作者
 type Operator struct {
 	// ID QQ号
-	ID uint `json:"id,omitempty"`
+	ID int64 `json:"id,omitempty"`
 	// Group (GroupMessage)消息来源群信息
 	Group Group `json:"group,omitempty"`
 	// MemberName 群名片
@@ -126,27 +126,32 @@ type Operator struct {
 // Group QQ群
 type Group struct {
 	// ID 消息来源群号
-	ID uint `json:"id,omitempty"`
+	ID int64 `json:"id,omitempty"`
 	// Name 消息来源群名
 	Name string `json:"name,omitempty"`
 	// Permisson bot在群中的角色
 	Permisson string `json:"permisson,omitempty"`
 }
 
+// Friend -
+type Friend struct {
+	// ID QQ号
+	ID int64 `json:"id"`
+	// NickName (FriendMessage)发送者昵称
+	NickName string `json:"nickname"`
+	// Remark (FriendMessage)发送者备注
+	Remark string `json:"remark"`
+}
+
 // Sender 消息发送者
 type Sender struct {
-	// ID QQ号
-	ID uint `json:"id"`
+	Friend
 	// MemberName (GroupMessage)发送者群昵称
 	MemberName string `json:"memberName"`
 	// Permission (GroupMessage)发送者在群中的角色
 	Permission string `json:"permission"`
 	// Group (GroupMessage)消息来源群信息
 	Group Group `json:"group"`
-	// NickName (FriendMessage)发送者昵称
-	NickName string `json:"nickname"`
-	// Remark (FriendMessage)发送者备注
-	Remark string `json:"remark"`
 }
 
 // ComplexEvent -
@@ -171,17 +176,33 @@ type ComplexEvent struct {
 	// New     bool
 	// Current bool
 	// GroupRecall
-	AuthorID  uint  `json:"authorId"`
-	MessageID uint  `json:"messageId"`
+	AuthorID  int64 `json:"authorId"`
+	MessageID int64 `json:"messageId"`
 	Time      int64 `json:"time"`
 	// MemberMuteEvent
 	DurationSeconds int `json:"durationSeconds"`
 
 	// MemberJoinRequestEvent
-	EventID   uint   `json:"eventId"`
-	FromID    uint   `json:"fromId"`
-	GroupID   uint   `json:"groupId"`
+	EventID   int64  `json:"eventId"`
+	FromID    int64  `json:"fromId"`
+	GroupID   int64  `json:"groupId"`
 	GroupName string `json:"groupName"`
 	Nickname  string `json:"nick"`
 	Message   string `json:"message"`
+}
+
+// GroupConfig -
+type GroupConfig struct {
+	Name              string
+	Announcement      string
+	ConfessTalk       bool
+	AllowMemberInvite bool
+	AutoApprove       bool
+	AnonymousChat     bool
+}
+
+// MemberInfo -
+type MemberInfo struct {
+	Name         string
+	SpecialTitle string
 }

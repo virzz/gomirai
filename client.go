@@ -20,7 +20,7 @@ type Client struct {
 	Name       string
 	AuthKey    string
 	HTTPClient *gentleman.Client
-	Bots       map[uint]*Bot
+	Bots       map[int64]*Bot
 	Logger     *logrus.Entry
 }
 
@@ -40,12 +40,14 @@ func NewClient(name, url, authKey string, logger ...*logrus.Entry) *Client {
 	return &Client{
 		AuthKey:    authKey,
 		HTTPClient: c,
-		Bots:       make(map[uint]*Bot),
+		Bots:       make(map[int64]*Bot),
 		Logger:     log,
 	}
 }
 
-// About -
+// --- API-HTTP插件相关 ---
+
+// About 使用此方法获取插件的信息，如版本号
 func (c *Client) About() (string, error) {
 	res, err := c.doGet("/about", nil)
 	if err != nil {
@@ -54,7 +56,9 @@ func (c *Client) About() (string, error) {
 	return gjson.Get(res, "data.version").String(), nil
 }
 
-// Auth 开始会话-认证(Authorize)
+// --- 认证相关 ---
+
+// Auth 使用此方法验证你的身份，并返回一个会话
 func (c *Client) Auth() (string, error) {
 	data := map[string]string{"authKey": c.AuthKey}
 	res, err := c.doPost("/auth", data)
@@ -65,8 +69,8 @@ func (c *Client) Auth() (string, error) {
 	return gjson.Get(res, "session").String(), nil
 }
 
-// Verify 校验Session
-func (c *Client) Verify(qq uint, sessionKey string) (*Bot, error) {
+// Verify 使用此方法校验并激活你的Session，同时将Session与一个已登录的Bot绑定
+func (c *Client) Verify(qq int64, sessionKey string) (*Bot, error) {
 	data := map[string]interface{}{"sessionKey": sessionKey, "qq": qq}
 	_, err := c.doPost("/verify", data)
 	if err != nil {
@@ -78,8 +82,9 @@ func (c *Client) Verify(qq uint, sessionKey string) (*Bot, error) {
 	return c.Bots[qq], nil
 }
 
-// Release 释放Session
-func (c *Client) Release(qq uint) error {
+// Release 使用此方式释放session及其相关资源（Bot不会被释放）
+// 不使用的Session应当被释放，长时间（30分钟）未使用的Session将自动释放，否则Session持续保存Bot收到的消息，将会导致内存泄露(开启websocket后将不会自动释放)
+func (c *Client) Release(qq int64) error {
 	data := map[string]interface{}{"sessionKey": c.Bots[qq].SessionKey, "qq": qq}
 	_, err := c.doPost("release", data)
 	if err != nil {
@@ -89,6 +94,8 @@ func (c *Client) Release(qq uint) error {
 	c.Logger.Infoln("Released")
 	return nil
 }
+
+// --- internal ---
 
 func (c *Client) doPost(path string, data interface{}) (string, error) {
 	c.Logger.Debugln("POST:", path, " Data:", data)
@@ -106,7 +113,7 @@ func (c *Client) doPost(path string, data interface{}) (string, error) {
 	if !res.Ok {
 		return res.String(), errors.New("Http: " + strconv.Itoa(res.StatusCode))
 	}
-	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
+	return res.String(), getErrByCode(gjson.Get(res.String(), "code").Int())
 }
 
 func (c *Client) doPostWithFormData(path string, fields map[string]interface{}) (string, error) {
@@ -134,7 +141,7 @@ func (c *Client) doPostWithFormData(path string, fields map[string]interface{}) 
 	if !res.Ok {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
 	}
-	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
+	return res.String(), getErrByCode(gjson.Get(res.String(), "code").Int())
 }
 
 func (c *Client) doGet(path string, params map[string]string) (string, error) {
@@ -153,10 +160,10 @@ func (c *Client) doGet(path string, params map[string]string) (string, error) {
 	if !res.Ok {
 		return res.String(), fmt.Errorf("HTTP: %d", res.StatusCode)
 	}
-	return res.String(), getErrByCode(uint(gjson.Get(res.String(), "code").Uint()))
+	return res.String(), getErrByCode(gjson.Get(res.String(), "code").Int())
 }
 
-func getErrByCode(code uint) error {
+func getErrByCode(code int64) error {
 	switch code {
 	case 0:
 		return nil
